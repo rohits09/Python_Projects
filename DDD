@@ -1,0 +1,88 @@
+🏦 Use Case: Digital Bank Statement Ordering
+🔹 High-Level Flow:
+Customer logs in
+
+System asks reason for statement
+
+Customer selects date range
+
+System fetches available statements (via API)
+
+Customer places an order for selected statements
+
+System confirms the order (and possibly sends it to address/email)
+
+🔷 1. Identify Bounded Contexts
+We divide responsibilities into bounded contexts:
+
+Bounded Context	Responsibilities
+CustomerContext	Auth, customer data, basic identity
+StatementContext	Statement metadata, fetch by date, display logic
+OrderContext	Order statement copies, track delivery
+ReasonContext	Manages selectable reasons for requesting copies
+🧠 2. Ubiquitous Language
+Term	Meaning
+Statement	A digital or printable record of bank transactions
+Reason	The business/legal reason for which user wants statements
+Order	A user request to receive physical/digital statements
+Date Range	The start and end date for statement fetching
+🏗️ 3. Domain Model by Context
+✳️ StatementContext
+@dataclass
+class StatementMetadata:
+    statement_id: str
+    customer_id: str
+    start_date: date
+    end_date: date
+    delivery_type: str  # 'Digital' or 'Hard Copy'
+✳️ ReasonContext
+@dataclass
+class StatementRequestReason:
+    code: str
+    description: str
+These are fetched via a separate API call.
+This context owns the reasons and exposes it to UI.
+
+✳️ OrderContext
+@dataclass
+class StatementOrder:
+    order_id: str
+    customer_id: str
+    statement_ids: List[str]
+    reason_code: str
+    delivery_address: Optional[str]
+    order_status: str = "Pending"
+🛠️ 4. Application Layer Flow
+This is what your UI/API orchestration team mostly touches:
+
+Frontend -> API Gateway
+
+➡️ GET /reasons-for-statement → (ReasonContext)
+➡️ POST /fetch-statements?date_from=&date_to= → (StatementContext)
+➡️ POST /place-order → (OrderContext)
+🔌 5. API Calls & Integration Mapping
+API / Feature	Context	Purpose
+/get-reasons	ReasonContext	Fetch reasons for UI dropdown
+/fetch-statements	StatementContext	Retrieve metadata from core DB/API
+/create-order	OrderContext	Record and initiate delivery of order
+📐 6. UI Layer Sequence (High-Level)
+Step 1 → Login ✅
+Step 2 → Call /get-reasons → show dropdown
+Step 3 → User selects date range → call /fetch-statements
+Step 4 → Show available statements with checkboxes
+Step 5 → User selects statements + reason → submit form
+Step 6 → Call /create-order with reason + statement IDs
+Step 7 → Show order confirmation
+🧩 7. Optional Enhancements
+Feature	Add To Context
+PDF generation	StatementContext or Shared Service
+Notifications (SMS/email)	NotificationContext
+Audit trail for requests	AuditContext
+✅ 8. Summary: How DDD Helps Here
+Separation of responsibility → No mixed logic in API or UI.
+
+Team autonomy → UI team works with clean APIs per context.
+
+Scalability → Order and Statement APIs evolve independently.
+
+Clarity → Everyone (even non-tech folks) uses the same vocabulary.
