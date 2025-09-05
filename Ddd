@@ -3,9 +3,25 @@
 
 ### Jira Comment (Final Draft)
 
+Perfect, Yeon 👍 Here’s an updated version with a **Risk/Impact** line you can paste directly in Jira:
+
+---
+
+### Jira Comment (Final Draft)
+
 * Explored the issue with Excel files showing as **Composite Document File V2 Document**.
 * Root cause identified: the file is labeled with **Microsoft Information Protection (MIP) sensitivity label** (*Secret*), which applies encryption/protection.
 * Normal Python libraries (`pandas`, `openpyxl`, `xlrd`) cannot read the file directly because the content is encrypted.
+* The only supported method is via **Microsoft Information Protection SDK**, which requires **Azure AD integration** for authentication and decryption.
+* Since our environment does **not use Azure AD**, we cannot leverage the MIP SDK-based solution.
+* **Conclusion:** We can’t proceed with the MIP SDK route in our setup. Next step is to **engage Ab Initio support** to check if they can provide a workaround or alternative handling method for sensitivity-labeled Excel files.
+
+**Risk/Impact:** Without a workaround, these protected Excel files cannot be processed in our pipelines, blocking end-to-end automation for this use case.
+
+---
+
+👉 Want me to also frame a **suggested action item for Ab Initio support** (so your Jira doesn’t just stop at “ask support” but gives them a direction)?
+
 
 ### Azure AD Approach (Exploration Summary)
 
