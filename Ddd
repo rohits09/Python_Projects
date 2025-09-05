@@ -1,1 +1,39 @@
-We used Domain-Driven Design (DDD) to ensure our complex statement ordering process is clearly modeled around real business needs, enabling consistent language and clean separation of responsibilities across services
+
+---
+
+### Jira Comment (Final Draft)
+
+* Explored the issue with Excel files showing as **Composite Document File V2 Document**.
+* Root cause identified: the file is labeled with **Microsoft Information Protection (MIP) sensitivity label** (*Secret*), which applies encryption/protection.
+* Normal Python libraries (`pandas`, `openpyxl`, `xlrd`) cannot read the file directly because the content is encrypted.
+
+### Azure AD Approach (Exploration Summary)
+
+* Use **Azure Active Directory (Azure AD)** for authentication.
+* Register an **App in Azure AD** to allow programmatic access.
+* Application authenticates with **Client ID + Secret** to Azure AD.
+* Azure AD issues an **access token**.
+* Token is passed to **Microsoft Information Protection (MIP) SDK**.
+* MIP SDK uses the token to **decrypt the sensitivity-labeled Excel file**.
+* Once decrypted, file can be processed with standard libraries (`pandas`, `openpyxl`).
+
+**Pros:**
+
+* Fully supported by Microsoft for handling protected files.
+* Secure and aligns with enterprise-grade compliance requirements.
+* Allows end-to-end automation once integrated.
+
+**Cons:**
+
+* Requires **Azure AD integration**, which we do not use in our environment.
+* Adds dependency on Microsoft’s ecosystem and SDK.
+* Additional setup effort for authentication and infrastructure.
+
+### Conclusion
+
+* Since our environment does **not use Azure AD**, we cannot leverage the MIP SDK-based solution.
+* **Next step:** Engage **Ab Initio support** to check if they can provide a workaround or alternative handling method for sensitivity-labeled Excel files.
+
+**Risk/Impact:** Without a workaround, these protected Excel files cannot be processed in our pipelines, blocking end-to-end automation for this use case.
+
+---
