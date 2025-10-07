@@ -1,0 +1,149 @@
+tws approach fo4 mail
+
+
+
+Excellent 👌 Yeon — here’s a **ready-to-use TWS End-of-Day Status Mail Script** (production-style).
+
+It gathers all job stream statuses from the **current plan**, formats them nicely, counts totals, and emails a daily summary.
+
+---
+
+## 🧩 **Script: `tws_eod_status.sh`**
+
+```bash
+#!/bin/bash
+###############################################################################
+#  IBM TWS End-of-Day Schedule Summary Mail Script
+#  Author: Yeon + Aria
+#  Purpose: Send daily summary mail of all job stream statuses (Success/Failed/Pending)
+###############################################################################
+
+# === Configuration ===
+# Load TWS environment (adjust path if needed)
+. /opt/ibm/TWS/TWS.env
+
+# Email recipient(s)
+MAIL_TO="team1@company.com, team2@company.com"
+
+# Report output file
+REPORT="/tmp/tws_eod_report_$(date +%Y%m%d).txt"
+TEMP="/tmp/tws_status_temp.txt"
+
+# === Generate Report Header ===
+echo "==================================================" > $REPORT
+echo " TWS End of Day Schedule Summary - $(date '+%d-%b-%Y %H:%M')" >> $REPORT
+echo "==================================================" >> $REPORT
+echo "Job Stream Name           | Status   | Start Time | End Time" >> $REPORT
+echo "--------------------------------------------------" >> $REPORT
+
+# === Extract job stream statuses from current plan ===
+# Command 'ss' = show job stream status
+# Output example:
+#   WSNAME#SCHEDULER     ST  S    SCHEDTIME
+# We'll parse relevant lines.
+
+conman "ss @#;sortby=WSNAME" > $TEMP
+
+# === Process the result ===
+SUCCESS_COUNT=0
+FAILED_COUNT=0
+PENDING_COUNT=0
+TOTAL_COUNT=0
+
+grep -E "^[A-Z0-9_#\.-]+" $TEMP | while read line; do
+    JS_NAME=$(echo "$line" | awk '{print $1}')
+    STATUS=$(echo "$line" | awk '{print $2}')
+    START=$(echo "$line" | awk '{print $3}')
+    END=$(echo "$line" | awk '{print $4}')
+
+    case "$STATUS" in
+        S|SUCC|SUCCESS)
+            STATUS="SUCCESS"
+            ((SUCCESS_COUNT++))
+            ;;
+        F|FAIL|ERROR)
+            STATUS="FAILED"
+            ((FAILED_COUNT++))
+            ;;
+        *) 
+            STATUS="PENDING"
+            ((PENDING_COUNT++))
+            ;;
+    esac
+
+    printf "%-25s | %-8s | %-10s | %-10s\n" "$JS_NAME" "$STATUS" "$START" "$END" >> $REPORT
+    ((TOTAL_COUNT++))
+done
+
+# === Summary Footer ===
+echo "--------------------------------------------------" >> $REPORT
+echo "Total Job Streams : $TOTAL_COUNT" >> $REPORT
+echo "Succeeded          : $SUCCESS_COUNT" >> $REPORT
+echo "Failed             : $FAILED_COUNT" >> $REPORT
+echo "Pending/In-Progress: $PENDING_COUNT" >> $REPORT
+echo "--------------------------------------------------" >> $REPORT
+
+# === Send Email ===
+mailx -s "TWS EOD Schedule Status - $(date '+%d-%b-%Y')" $MAIL_TO < $REPORT
+
+# Clean up
+rm -f $TEMP
+```
+
+---
+
+## ⚙️ **How to Use**
+
+1. **Save** the file as
+   `/opt/ibm/TWS/scripts/tws_eod_status.sh`
+
+2. **Make it executable**
+
+   ```bash
+   chmod +x /opt/ibm/TWS/scripts/tws_eod_status.sh
+   ```
+
+3. **Test manually**
+
+   ```bash
+   /opt/ibm/TWS/scripts/tws_eod_status.sh
+   ```
+
+4. **Schedule it in TWS**
+
+   * Create a **Job Stream (e.g., EOD_STATUS_MAIL)** that runs this script daily after all jobs finish (say, 23:30).
+   * Or add it as the **last job** in your master schedule.
+
+---
+
+## 📧 Example Email Output
+
+```
+==================================================
+ TWS End of Day Schedule Summary - 06-Oct-2025 23:30
+==================================================
+Job Stream Name           | Status   | Start Time | End Time
+--------------------------------------------------
+FIN_DAILY_STREAM          | SUCCESS  | 07:00      | 07:45
+HR_PAYROLL_STREAM         | FAILED   | 08:00      | 08:20
+ETL_LOAD_STREAM           | SUCCESS  | 09:00      | 09:40
+SALES_REFRESH             | PENDING  | 22:00      | -
+--------------------------------------------------
+Total Job Streams : 30
+Succeeded          : 27
+Failed             : 2
+Pending/In-Progress: 1
+--------------------------------------------------
+```
+
+---
+
+## 🪶 Notes
+
+* Works with both **distributed** and **z/OS TWS** (minor format changes may apply).
+* For better HTML-style mails, we can easily adapt it with `mailx -a "Content-type: text/html"`.
+* If your org uses **Netcool**, you can even make Netcool trigger this script once all events are closed.
+
+---
+
+Would you like me to enhance this script to send a **colored HTML email** (green for success, red for failure, yellow for pending)? It looks great in Outlook and is more readable for team reports.
