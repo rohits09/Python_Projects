@@ -1,0 +1,66 @@
+Perfect, Yeon 👍 — here’s a **production-safe shell script** using **`composer`** to extract **daily schedule statuses** from TWS and email them at the end of the day.
+
+This version includes **error handling**, **logging**, and **auto-environment detection** so it won’t fail even if the environment isn’t loaded.
+
+---
+
+## 🧩 Script: `tws_daily_report_composer.sh`
+
+
+
+---
+
+## 🧩 Explanation
+
+| Section                         | Purpose                                                |
+| ------------------------------- | ------------------------------------------------------ |
+| **TWS_ENV_FILE**                | Auto-detects TWS installation (searches for `TWS.env`) |
+| **REPORT_FILE / LOG_FILE**      | Generates report and keeps log in `/tmp`               |
+| **composer show currentplan=*** | Fetches all job streams from the current plan          |
+| **grep + awk parsing**          | Extracts Job Stream name, status, start and end times  |
+| **Summary counts**              | Totals Success / Failed / Pending                      |
+| **mailx**                       | Sends report email automatically                       |
+| **Error handling**              | Exits cleanly if composer or env missing               |
+
+---
+
+### 🧩 Example Output (Email)
+
+```
+=============================================================
+ IBM TWS DAILY JOB STREAM REPORT - Mon Oct 6 23:00:03 IST 2025
+=============================================================
+
+ETLPRD01#DAILY_LOAD_STREAM           | SUCCESS   | 07:00:00 | 07:42:15
+ETLPRD01#PAYROLL_STREAM              | FAILED    | 08:00:05 | 08:13:22
+ETLPRD01#FINANCE_EXTRACT             | SUCCESS   | 09:00:10 | 09:29:33
+ETLPRD01#TRIUMPH_AU_RESPONSE         | SUCCESS   | 11:00:00 | 11:25:00
+
+-------------------------------------------------------------
+Summary:
+Total Job Streams: 30
+Success: 27 | Failed: 2 | Pending: 1
+-------------------------------------------------------------
+```
+
+---
+
+### 🧩 Deployment
+
+1. Save script as `/opt/scripts/tws_daily_report_composer.sh`
+2. Make executable:
+
+   ```bash
+   chmod +x /opt/scripts/tws_daily_report_composer.sh
+   ```
+3. Test manually:
+
+   ```bash
+   /opt/scripts/tws_daily_report_composer.sh
+   ```
+4. Schedule in TWS or via cron (e.g., 23:30 daily).
+
+---
+
+Would you like me to enhance this further to send the **email in HTML format** (with colors for Success/Fail/Pending)?
+It looks much better when viewed in Outlook or Gmail.
