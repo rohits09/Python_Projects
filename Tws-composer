@@ -1,0 +1,99 @@
+#!/bin/bash
+###############################################################################
+# Script Name : tws_daily_report_composer.sh
+# Purpose     : Generate TWS daily job stream summary using composer
+# Author      : Yeon’s automation setup
+# Version     : 1.0
+###############################################################################
+
+# === CONFIGURATION ===
+TWS_ENV_FILE=$(find /opt -type f -name "TWS.env" 2>/dev/null | head -1)
+REPORT_DIR="/tmp"
+DATE_STR=$(date +%Y%m%d)
+REPORT_FILE="$REPORT_DIR/tws_daily_report_${DATE_STR}.txt"
+LOG_FILE="$REPORT_DIR/tws_daily_report_${DATE_STR}.log"
+MAIL_TO="tws-team@company.com"
+MAIL_SUBJECT="TWS Daily Schedule Summary - $(date '+%d-%b-%Y')"
+
+# === LOGGING FUNCTION ===
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "----- Starting TWS Daily Composer Report -----"
+
+# === STEP 1: LOAD TWS ENVIRONMENT ===
+if [ -f "$TWS_ENV_FILE" ]; then
+    . "$TWS_ENV_FILE"
+    log "Loaded TWS environment from $TWS_ENV_FILE"
+else
+    log "ERROR: TWS.env file not found!"
+    exit 1
+fi
+
+# === STEP 2: CHECK IF COMPOSER IS AVAILABLE ===
+if ! command -v composer >/dev/null 2>&1; then
+    log "ERROR: composer command not found in PATH after sourcing TWS.env"
+    exit 2
+fi
+
+# === STEP 3: GENERATE REPORT HEADER ===
+{
+    echo "============================================================="
+    echo "  IBM TWS DAILY JOB STREAM REPORT - $(date)"
+    echo "============================================================="
+    echo ""
+} > "$REPORT_FILE"
+
+# === STEP 4: FETCH CURRENT PLAN JOB STREAMS ===
+log "Collecting job stream information..."
+composer show currentplan=* > /tmp/tws_raw_${DATE_STR}.out 2>>"$LOG_FILE"
+
+if [ $? -ne 0 ]; then
+    log "ERROR: composer command failed to retrieve current plan"
+    exit 3
+fi
+
+# === STEP 5: PARSE STATUS INFORMATION ===
+grep -E "JOBSTREAM|STATUS|START|END" /tmp/tws_raw_${DATE_STR}.out | \
+awk '
+/^JOBSTREAM/ {js=$2}
+/^STATUS/ {st=$2}
+/^START/ {start=$2}
+/^END/ {end=$2; printf "%-40s | %-10s | %-8s | %-8s\n", js, st, start, end}
+' >> "$REPORT_FILE"
+
+# === STEP 6: ADD SUMMARY COUNTS ===
+TOTAL=$(grep -c "JOBSTREAM" /tmp/tws_raw_${DATE_STR}.out)
+SUCCESS=$(grep -B1 "STATUS SUCCESS" /tmp/tws_raw_${DATE_STR}.out | grep -c "JOBSTREAM")
+FAILED=$(grep -B1 "STATUS FAILED" /tmp/tws_raw_${DATE_STR}.out | grep -c "JOBSTREAM")
+PENDING=$(grep -B1 "STATUS READY" /tmp/tws_raw_${DATE_STR}.out | grep -c "JOBSTREAM")
+
+{
+    echo ""
+    echo "-------------------------------------------------------------"
+    echo "Summary:"
+    echo "Total Job Streams: $TOTAL"
+    echo "Success: $SUCCESS | Failed: $FAILED | Pending: $PENDING"
+    echo "-------------------------------------------------------------"
+} >> "$REPORT_FILE"
+
+log "Report generated successfully at $REPORT_FILE"
+
+# === STEP 7: SEND EMAIL ===
+if command -v mailx >/dev/null 2>&1; then
+    mailx -s "$MAIL_SUBJECT" "$MAIL_TO" < "$REPORT_FILE"
+    if [ $? -eq 0 ]; then
+        log "Email sent successfully to $MAIL_TO"
+    else
+        log "ERROR: Failed to send email"
+    fi
+else
+    log "WARNING: mailx not found, skipping email"
+fi
+
+# === STEP 8: CLEANUP ===
+rm -f /tmp/tws_raw_${DATE_STR}.out
+
+log "----- TWS Daily Composer Report Completed Successfully -----"
+exit 0
