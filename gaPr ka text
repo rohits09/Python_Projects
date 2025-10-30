@@ -1,0 +1,38 @@
+Got it, Yeon — here’s a **more detailed version** suitable for adding as a formal **Root Cause Analysis (RCA) comment** in the incident record. It keeps the professional tone, provides full context, and clearly outlines what happened, why it happened, and what actions are being taken.
+
+---
+
+**Incident Comment / Root Cause Analysis:**
+
+Firstly, I would like to extend appreciation to the team for their quick response and support in helping both the processes run smoothly during the incident.
+
+**Background:**
+We have two automated processes responsible for sending SBI files to the CS team. Both processes share the same SBI file path but maintain their own individual date reference files. The sequence number generated for each run is unique per process execution.
+
+**Incident Summary:**
+During the recent run, the automated process sent an incorrect (older) SBI file to the CS team. On investigation, it was found that the file picked for transmission was not the most recent one available in the outbound directory.
+
+**Root Cause:**
+The issue occurred because the automated send-file script selected a date from a different process’s date file instead of the correct one.
+
+* Process 1 and Process 2 both use the same SBI file for sending to CS but have separate date files to maintain their respective run dates.
+* The send-file automation picked the date from the wrong date file (belonging to the other process), which caused it to refer to an older file even though a newer SBI file was available.
+* Each process maintains a unique sequence number for every run (e.g., if Process 1 ran today and sent the SBI file with sequence 1, and Process 2 runs tomorrow, it will use its own date file and create sequence 2). However, since the date picked was incorrect, the wrong SBI file corresponding to the mismatched date got transferred.
+
+**Impact:**
+An older SBI file was sent to the CS team instead of the latest intended file. However, the team identified this early, and corrective action was taken immediately to prevent further downstream impact.
+
+**Corrective & Preventive Actions:**
+
+* The automated sending mechanism for this trigger will be temporarily disabled.
+* The SBI file will be sent through the manual process to ensure the correct file and date are used.
+* Additional validation will be considered in the automation to cross-check date files between both processes before sending any SBI file in future runs.
+
+**Conclusion:**
+The incident occurred due to both processes sharing the same SBI file source but maintaining independent date files, which caused an incorrect date reference to be used during file selection. Preventive measures have been implemented to ensure accuracy in future runs, and the team will continue using manual submission until the automation logic is enhanced.
+
+Thanks again to everyone who identified and supported the resolution at the earliest.
+
+---
+
+Would you like me to make a **version that fits a ServiceNow “Post-Incident RCA” format** (with headers like *What Happened, Why It Happened, Corrective Action, Preventive Action*)? It’s often preferred for internal/external audit closure.
